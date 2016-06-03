@@ -191,10 +191,12 @@ int     OneShot                   = 0;       // enable the one shot
 char inChar = -1; // Where to store the character read
 
 // misc
-int CounterA    = 0;
-int autoCounter = 0;
-int badCharCounter   = 0 ; // bluetooth bad char counter
-
+int     CounterA       = 0;
+int     autoCounter    = 0;
+int     badCharCounter = 0 ; // bluetooth bad char counter
+boolean badCharFlag    = false ;
+unsigned long badCharTimer = millis();
+long badCharTimerLimit    = 1000  ; // 1 sec 
 /* **************************************************************************** */
 //  SETUP()
 
@@ -533,47 +535,55 @@ char readSerialPort(void) {
 
 // readBlueTooth()  Bluetooth  ////////////////////////////////////////////
 char readBlueTooth(void) {
-  if (bluetooth.available() == 0) {
-    return 1;
-  }
-  else {
+
     while (bluetooth.available() > 0) // Don't read unless you know there is data
     {
-     // delay(5);
-      ManualMode = false;                       // if we received a char, disable manual mode BT only
-      ManualTimeoutMillis = millis();           // reset the idle timer
+      ManualMode = false;                        // if we received a char, disable manual mode BT only
+       ManualTimeoutMillis = millis();           // reset the idle timer to enable Manual mode
+
       Serial.print("bluetooth.available() = ");  //debug
-      Serial.println(bluetooth.available());    //debug
+       Serial.println(bluetooth.available());    //debug
     
     inChar = bluetooth.read();  // Read a character     
-    Serial.print("bt raw >>");
-      Serial.println(inChar);   
-    if (((inChar >= 64) && (inChar <= 90))      // ascii A through Z
+     Serial.print("bt raw >>");
+      Serial.print(inChar); 
+       Serial.print(", hex: ");
+        Serial.println(inChar, HEX);   // prints value as string in hexadecimal (base 16):
+
+
+        
+    if (((inChar >= 63) && (inChar <= 90))      // ascii A through Z
             || (inChar == 94)                   // ascii ^
              || (inChar == 43)                  // ascii +
-              || (inChar == 45)                 // ascii -
-               || (inChar == 63) ) {            // ascii ?
+              || (inChar == 45) ) {             // ascii -
+     
+      // if we make it here, it is a good character that passed the filter tests          
       Serial.print("bt filtered >>");
-      Serial.println(inChar);   
-      processCommand(inChar);
-               badCharCounter = 0;
+       Serial.print(inChar); 
+        Serial.print(", hex: ");
+         Serial.println(inChar, HEX);               // prints value as string in hexadecimal (base 16): 
+          processCommand(inChar);                 // process the command
+           badCharCounter = 0;
+            badCharFlag = false;
+
+ 
        } else { 
+
+      // if we make it here, character failed the filter test, enable retries  
        while (bluetooth.available() > 0) inChar = bluetooth.read();  // Flush the buffer
+       
        delay(5);                                                     // Delay a slight amount
-        Serial.write("s\n");
-        bluetooth.print("s\n");                                         // Send a retry
-        badCharCounter++;                                               // increment the retry count
-        Serial.print("badCharCounter: ");
-        Serial.println(badCharCounter);
-        // if (badCharCounter >= 3) {
-           // inChar = 66;                                               // ISSUE A RESET 66 = "B"
-           // processCommand(inChar);
-           // badCharCounter = 0;
-         //  Serial.println("3+ bad bluetooth characters in a row");
-         // }
+        bluetooth.print("s\n");                                      // send a retry character
+         badCharCounter++; 
+          badCharFlag = true;
+           badCharTimer = millis() ;
+        Serial.write("s\n");                                         // send a retry character 
+         Serial.print("badCharCounter: ");
+          Serial.println(badCharCounter);
+   // in the main loop check to see if retry needs to be sent again by checking badCharFlag and badChar Timer             
+   
        } // of if inchar
     } // of While
-  } // of if
 } // of function readBlueTooth
 
 // FeedLightOn  ///////////////////////////////////////////////////////////
@@ -731,7 +741,18 @@ if ((millis() - lastDebounceTime) > debounceDelay) {
   // Read and process any commands that have arrived via USB
    if (Serial.available()    > 0) readSerialPort(); // serial port
    if (bluetooth.available() > 0) readBlueTooth();  // bluetooth port
+  // execute a BT character retry if necessary
+   if (((millis() - badCharTimer) > badCharTimerLimit) && (badCharFlag == true)) {
 
+         // send out the next retry request
+         bluetooth.print("s\n");                                      // send a retry character
+          badCharCounter++; 
+           badCharTimer = millis() ;
+        Serial.write("s\n");                                         // debug echo
+         Serial.print("badCharCounter: ");
+          Serial.println(badCharCounter);
+    }
+   
   // Blink the run light
   currentMillis = millis();
   if (dipperLSfault) {divisor = 10; } else {divisor = 1; }
