@@ -57,6 +57,7 @@
 // F-DOWN Dipper
 // G-ON SOUND
 // H-OFF SOUND
+// X-KEEP ALIVE RESPONSE TO x SENT FROM ARDUINO
 // Z-NOOP (get a z returned but no actions taken 500ms delay)
 // ^-AUTO CYCLE toggle auto cycle on/off
 // +-UP offset increment and save to EEPROM
@@ -196,7 +197,7 @@ int     autoCounter    = 0;
 int     badCharCounter = 0 ; // bluetooth bad char counter
 boolean badCharFlag    = false ;
 unsigned long badCharTimer = millis();
-long badCharTimerLimit    = 1000  ; // 1 sec 
+long badCharTimerLimit    = 100  ; // .1 sec 
 /* **************************************************************************** */
 //  SETUP()
 
@@ -415,7 +416,7 @@ char processCommand(char c1)
           autoCycle = false;
           autoCounter = 0;
           dipperLSfault= false;
-          // delay(500);
+          ManualMode = false;
           return 0;
           break;
         case 'C':
