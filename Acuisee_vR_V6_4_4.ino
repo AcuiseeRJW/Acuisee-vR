@@ -513,31 +513,25 @@ char processCommand(char c1)
 
 // readSerialPort()   ////////////////////////////////////////////
 char readSerialPort(void) {
-  if (Serial.available() == 0) {
-    return 1;
-  }
-  else {
-    while (Serial.available() > 0) // Don't read unless you know there is data
-    {
-     // delay(5); 
+
+    while (Serial.available() > 0) { // Don't read unless you know there is data
       inChar = Serial.read(); // Read a character
+      
       // ASCII Decimal Range for A through Z caps only or ^(auto) or + or - or ?
-       if (((inChar >= 64) && (inChar <= 90))   // ascii A through Z
+          if (((inChar >= 63) && (inChar <= 90))      // ascii A through Z, ?, and @
             || (inChar == 94)                   // ascii ^
              || (inChar == 43)                  // ascii +
-              || (inChar == 45)                 // ascii -
-               || (inChar == 63) ) {            // ascii ?
+              || (inChar == 45) ) {             // ascii -
          processCommand(inChar);
        } // of if inchar
     } // of While
-  } // of if
 } // of function readSerialPort
 
 // readBlueTooth()  Bluetooth  ////////////////////////////////////////////
 char readBlueTooth(void) {
 
-    while (bluetooth.available() > 0) // Don't read unless you know there is data
-    {
+    while (bluetooth.available() > 0) { // Don't read unless you know there is data
+
       ManualMode = false;                        // if we received a char, disable manual mode BT only
        ManualTimeoutMillis = millis();           // reset the idle timer to enable Manual mode
 
@@ -552,7 +546,7 @@ char readBlueTooth(void) {
 
 
         
-    if (((inChar >= 63) && (inChar <= 90))      // ascii A through Z
+    if (((inChar >= 63) && (inChar <= 90))      // ascii A through Z, ?, and @
             || (inChar == 94)                   // ascii ^
              || (inChar == 43)                  // ascii +
               || (inChar == 45) ) {             // ascii -
